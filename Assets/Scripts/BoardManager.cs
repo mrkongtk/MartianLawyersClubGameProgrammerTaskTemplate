@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Zenject;
 
 public class BoardManager : MonoBehaviour
 {
@@ -29,6 +30,9 @@ public class BoardManager : MonoBehaviour
     public Material selectedMat;
 
     public int[] EnPassantMove { set; get; }
+
+    [Inject]
+    private IChessAdvisor chessAdvisor;
 
     // Use this for initialization
     void Start()
@@ -64,7 +68,7 @@ public class BoardManager : MonoBehaviour
             Application.Quit();
     }
 
-    private void SelectChessman(int x, int y)
+    private async void SelectChessman(int x, int y)
     {
         if (Chessmans[x, y] == null) return;
 
@@ -95,6 +99,10 @@ public class BoardManager : MonoBehaviour
         selectedChessman.GetComponent<MeshRenderer>().material = selectedMat;
 
         BoardHighlights.Instance.HighLightAllowedMoves(allowedMoves);
+
+        var suggestedLocation = await chessAdvisor.SuggestMovement(Chessmans[x, y], Chessmans, allowedMoves);
+        Debug.Log($"suggestions: {string.Join(", ", suggestedLocation)}");
+        
     }
 
     private bool calculateVictory(bool isWhiteTurn, Chessman targetChessman)

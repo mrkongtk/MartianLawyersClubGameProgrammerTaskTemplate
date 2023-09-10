@@ -33,6 +33,7 @@ namespace Gpt4All.Samples
             manager.AddResponseUpdatedListener(OnResponseHandler);
             showChatButton.onClick.AddListener(OnShowChatPressed);
             hideChatButton.onClick.AddListener(OnHideChatPressed);
+            manager.AddOnSubmitListener(OnIChessAdvisorSubmit);
         }
 
         private void OnDestroy()
@@ -42,6 +43,7 @@ namespace Gpt4All.Samples
             manager.RemoveResponseUpdatedListener(OnResponseHandler);
             showChatButton.onClick.RemoveListener(OnShowChatPressed);
             hideChatButton.onClick.RemoveListener(OnHideChatPressed);
+            manager.RemoveOnSubmitListener(OnIChessAdvisorSubmit);
         }
 
         private void Start()
@@ -76,6 +78,20 @@ namespace Gpt4All.Samples
         private void OnSubmitPressed()
         {
             SendToChat(input.text);
+        }
+
+        private void OnIChessAdvisorSubmit(string query, bool start)
+        {
+            if (start)
+            {
+                input.text = "";
+                output.text += $"<b>User:</b> {query}\n<b>Answer</b>: ";
+                _previousText = output.text;
+            } else
+            {
+                output.text += "\n";
+                outputArea.normalizedPosition = Vector2.zero;
+            }
         }
 
         private async void SendToChat(string prompt)
