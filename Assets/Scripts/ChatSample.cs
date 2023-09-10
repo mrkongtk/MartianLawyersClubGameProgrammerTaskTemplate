@@ -1,12 +1,14 @@
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using Zenject;
 
 namespace Gpt4All.Samples
 {
     public class ChatSample : MonoBehaviour
     {
-        public LlmManager manager;
+        [Inject]
+        public IChessAdvisor manager;
 
         [Header("Chat")]
         public TMPro.TMP_InputField input;
@@ -28,7 +30,7 @@ namespace Gpt4All.Samples
         {
             input.onEndEdit.AddListener(OnSubmit);
             submit.onClick.AddListener(OnSubmitPressed);
-            manager.OnResponseUpdated += OnResponseHandler;
+            manager.AddResponseUpdatedListener(OnResponseHandler);
             showChatButton.onClick.AddListener(OnShowChatPressed);
             hideChatButton.onClick.AddListener(OnHideChatPressed);
         }
@@ -37,7 +39,7 @@ namespace Gpt4All.Samples
         {
             input.onEndEdit.RemoveListener(OnSubmit);
             submit.onClick.RemoveListener(OnSubmitPressed);
-            manager.OnResponseUpdated -= OnResponseHandler;
+            manager.RemoveResponseUpdatedListener(OnResponseHandler);
             showChatButton.onClick.RemoveListener(OnShowChatPressed);
             hideChatButton.onClick.RemoveListener(OnHideChatPressed);
         }
@@ -85,7 +87,7 @@ namespace Gpt4All.Samples
             output.text += $"<b>User:</b> {prompt}\n<b>Answer</b>: ";
             _previousText = output.text;
 
-            await manager.Prompt(prompt);
+            await manager.Submit(prompt);
             output.text += "\n";
             outputArea.normalizedPosition = Vector2.zero;
         }
