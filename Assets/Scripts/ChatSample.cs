@@ -8,10 +8,19 @@ namespace Gpt4All.Samples
     {
         public LlmManager manager;
 
-        [Header("UI")]
-        public InputField input;
-        public Text output;
+        [Header("Chat")]
+        public TMPro.TMP_InputField input;
+        public ScrollRect outputArea;
+        public TMPro.TMP_Text output;
         public Button submit;
+
+        [Header("Appearance")]
+        [SerializeField]
+        protected RectTransform textArea;
+        [SerializeField]
+        protected Button showChatButton;
+        [SerializeField]
+        protected Button hideChatButton;
 
         private string _previousText;
 
@@ -20,6 +29,39 @@ namespace Gpt4All.Samples
             input.onEndEdit.AddListener(OnSubmit);
             submit.onClick.AddListener(OnSubmitPressed);
             manager.OnResponseUpdated += OnResponseHandler;
+            showChatButton.onClick.AddListener(OnShowChatPressed);
+            hideChatButton.onClick.AddListener(OnHideChatPressed);
+        }
+
+        private void OnDestroy()
+        {
+            input.onEndEdit.RemoveListener(OnSubmit);
+            submit.onClick.RemoveListener(OnSubmitPressed);
+            manager.OnResponseUpdated -= OnResponseHandler;
+            showChatButton.onClick.RemoveListener(OnShowChatPressed);
+            hideChatButton.onClick.RemoveListener(OnHideChatPressed);
+        }
+
+        private void Start()
+        {
+            ShowChat(false);
+        }
+
+        private void OnShowChatPressed()
+        {
+            ShowChat(true);
+        }
+
+        private void OnHideChatPressed()
+        {
+            ShowChat(false);
+        }
+
+        private void ShowChat(bool show)
+        {
+            showChatButton.gameObject.SetActive(!show);
+            hideChatButton.gameObject.SetActive(show);
+            textArea.gameObject.SetActive(show);
         }
 
         private void OnSubmit(string prompt)
@@ -45,11 +87,13 @@ namespace Gpt4All.Samples
 
             await manager.Prompt(prompt);
             output.text += "\n";
+            outputArea.normalizedPosition = Vector2.zero;
         }
 
         private void OnResponseHandler(string response)
         {
             output.text = _previousText + response;
+            outputArea.normalizedPosition = Vector2.zero;
         }
     }
 }
