@@ -97,10 +97,9 @@ public class BoardManager : MonoBehaviour
         BoardHighlights.Instance.HighLightAllowedMoves(allowedMoves);
     }
 
-    private bool calculateVictory()
+    private bool calculateVictory(bool isWhiteTurn, Chessman targetChessman)
     {
-        var rng = new System.Random();
-        return rng.Next(0, 100) < 50;
+        return targetChessman.isWhite != isWhiteTurn;
     }
 
     private void MoveChessman(int x, int y)
@@ -121,7 +120,7 @@ public class BoardManager : MonoBehaviour
                     return;
                 }
 
-                victory = calculateVictory();
+                victory = calculateVictory(isWhiteTurn, c);
                 if (victory)
                 {
                     activeChessman.Remove(c.gameObject);
