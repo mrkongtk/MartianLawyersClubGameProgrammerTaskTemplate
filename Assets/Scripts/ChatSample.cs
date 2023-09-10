@@ -8,7 +8,7 @@ namespace Gpt4All.Samples
     public class ChatSample : MonoBehaviour
     {
         [Inject]
-        public IChessAdvisor manager;
+        private IChessAdvisor manager;
 
         [Header("Chat")]
         public TMPro.TMP_InputField input;
@@ -23,6 +23,11 @@ namespace Gpt4All.Samples
         protected Button showChatButton;
         [SerializeField]
         protected Button hideChatButton;
+
+        [Header("Loading")]
+        [SerializeField]
+        protected GameObject loadingIcon;
+
 
         private string _previousText;
 
@@ -48,6 +53,7 @@ namespace Gpt4All.Samples
 
         private void Start()
         {
+            loadingIcon.SetActive(false);
             ShowChat(false);
         }
 
@@ -82,6 +88,7 @@ namespace Gpt4All.Samples
 
         private void OnIChessAdvisorSubmit(string query, bool start)
         {
+            loadingIcon.SetActive(start);
             if (start)
             {
                 input.text = "";

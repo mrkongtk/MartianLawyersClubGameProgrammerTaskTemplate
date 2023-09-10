@@ -6,30 +6,8 @@ using Gpt4All;
 using UnityEngine;
 using Zenject;
 using System.Linq;
-using UnityEngine.Windows;
-using LlmChessAdvisorSpace;
+using IChessAdvisorSpace;
 using System.Text.RegularExpressions;
-
-namespace LlmChessAdvisorSpace
-{
-    public static class ChessmanExtension
-    {
-        public static string ToLocationString(this Chessman chessman)
-        {
-            var targetColor = chessman.isWhite ? "White" : "Black";
-            var targetXLocation = (char)('a' + chessman.CurrentX);
-            var targetYLocation = (char)('1' + chessman.CurrentY);
-            return $"{targetColor} {chessman.GetType()} {targetXLocation}{targetYLocation}";
-        }
-
-        public static string ToLocationString(this Vector2Int location)
-        {
-            var xLocation = (char)('a' + location.x);
-            var yLocation = (char)('1' + location.y);
-            return $"{xLocation}{yLocation}";
-        }
-    }
-}
 
 [RequireComponent(typeof(LlmManager))]
 public class LlmChessAdvisor : IChessAdvisor
@@ -38,6 +16,8 @@ public class LlmChessAdvisor : IChessAdvisor
 
     private IChessAdvisorResponseUpdatedDelegate onResponseUpdatedListener;
     private IChessAdvisorSubmitDelegate onSubmitListener;
+
+    private bool isAnalysing = false;
 
     [Inject]
     private void Init()
@@ -49,6 +29,11 @@ public class LlmChessAdvisor : IChessAdvisor
     public override bool IsLoaded()
     {
         return llmManager.IsLoaded;
+    }
+
+    public override bool IsAnalysing()
+    {
+        return isAnalysing;
     }
 
     public override void AddResponseUpdatedListener(IChessAdvisorResponseUpdatedDelegate listener)
@@ -73,44 +58,31 @@ public class LlmChessAdvisor : IChessAdvisor
     public override async Task<string> Submit(string text)
     {
         onSubmitListener?.Invoke(text, true);
+        while (isAnalysing)
+        {
+            await Task.Yield();
+        }
+        isAnalysing = true;
         var result = await llmManager.Prompt(text);
+        isAnalysing = false;
         onSubmitListener?.Invoke(text, false);
         return result;
     }
 
-    public override async Task<List<Vector2Int>> SuggestMovement(Chessman targetChessman, Chessman[,] chessmans, bool[,] allowedMoves)
+    public override async Task<List<Vector2Int>> SuggestMovement(Query query)
     {
+        var targetChessman = query.target;
+        var chessmans = query.board;
+        var allowedMoves = query.allowedMove;
+
         var stringBuilder = new StringBuilder();
         stringBuilder.Append("In a chess game, chessman locations are: ");
 
-        var chessmanLocations = new List<string>();
-        for (int x = 0; x <= chessmans.GetUpperBound(0); x++)
-        {
-            for (int y = 0; y <= chessmans.GetUpperBound(1); y++)
-            {
-                var chessman = chessmans[x, y];
-                if (chessman != null)
-                {
-                    chessmanLocations.Add(chessman.ToLocationString());
-                }
-            }
-        }
-        stringBuilder.Append(string.Join(", ", chessmanLocations));
+        stringBuilder.Append(string.Join(", ", chessmans.Select(a => a.ToLocationString())));
 
         stringBuilder.Append($". Which location should {targetChessman.ToLocationString()} move? ");
 
-        var allowedList = new List<Vector2Int>();
-        for (int x = 0; x <= allowedMoves.GetUpperBound(0); x++)
-        {
-            for (int y = 0; y <= allowedMoves.GetUpperBound(1); y++)
-            {
-                if (allowedMoves[x, y])
-                {
-                    allowedList.Add(new Vector2Int(x, y));
-                }
-            }
-        }
-        var possibleLocationsString = string.Join(" or ", allowedList.Select(a =>
+        var possibleLocationsString = string.Join(" or ", allowedMoves.Select(a =>
         {
             var xLocation = (char)('a' + a.x);
             var yLocation = (char)('1' + a.y);
@@ -122,8 +94,9 @@ public class LlmChessAdvisor : IChessAdvisor
 
         var allExistingLocations = ExtractLocations(response);
         return allExistingLocations.AsParallel().Where(a =>
-            allowedList.Contains(a)
-            && !(a.x == targetChessman.CurrentX && a.y == targetChessman.CurrentY))
+            allowedMoves.Contains(a)
+            && !(a.x == targetChessman.x && a.y == targetChessman.y))
+            .ToHashSet()
             .ToList();
     }
 
@@ -143,10 +116,11 @@ public class LlmChessAdvisor : IChessAdvisor
         {
             try
             {
-                var locationString = collections[i].Groups[1].Value;
-                var x = locationString[0] - 'a';
-                var y = locationString[1] - '1';
-                results.Add(new Vector2Int(x, y));
+                var location = collections[i].Groups[1].Value.FromLocationString();
+                if (location.HasValue)
+                {
+                    results.Add(location.Value);
+                }
             }
             catch
             {

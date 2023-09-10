@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using Zenject;
 
@@ -68,7 +69,7 @@ public class BoardManager : MonoBehaviour
             Application.Quit();
     }
 
-    private async void SelectChessman(int x, int y)
+    private void SelectChessman(int x, int y)
     {
         if (Chessmans[x, y] == null) return;
 
@@ -103,8 +104,8 @@ public class BoardManager : MonoBehaviour
         var capturableChessmans = CapturableChessman(Chessmans, allowedMoves, isWhiteTurn);
         if (capturableChessmans.Count > 0)
         {
-            var suggestedLocation = await chessAdvisor.SuggestMovement(Chessmans[x, y], Chessmans, allowedMoves);
-            Debug.Log($"suggestions: {string.Join(", ", suggestedLocation)}");
+            var query = new IChessAdvisor.Query(selectedChessman, Chessmans, allowedMoves);
+            GiveSuggestion(query);
         }
         
     }
@@ -123,6 +124,22 @@ public class BoardManager : MonoBehaviour
             }
         }
         return result;
+    }
+
+    private async void GiveSuggestion(IChessAdvisor.Query query)
+    {
+        while (chessAdvisor.IsAnalysing())
+        {
+            await Task.Yield();
+        }
+        if (query.target.IsSame(selectedChessman))
+        {
+            var suggestedLocation = await chessAdvisor.SuggestMovement(query);
+            if (query.target.IsSame(selectedChessman))
+            {
+                BoardHighlights.Instance.SuggestionMoves(suggestedLocation);
+            }
+        }
     }
 
     private bool calculateVictory(bool isWhiteTurn, Chessman targetChessman)
@@ -207,7 +224,7 @@ public class BoardManager : MonoBehaviour
 
         selectedChessman.GetComponent<MeshRenderer>().material = previousMat;
 
-        BoardHighlights.Instance.HideHighlights();
+        BoardHighlights.Instance.HideAll();
         selectedChessman = null;
     }
 
@@ -329,7 +346,7 @@ public class BoardManager : MonoBehaviour
         }
 
         isWhiteTurn = true;
-        BoardHighlights.Instance.HideHighlights();
+        BoardHighlights.Instance.HideAll();
         SpawnAllChessmans();
     }
 }

@@ -6,11 +6,11 @@ using Zenject;
 public class ChessSceneInstaller : MonoInstaller
 {
     [SerializeField]
-    protected LlmChessAdvisor llmChessAdvisorPrefab;
+    protected IChessAdvisor chessAdvisorPrefab;
 
     public override void InstallBindings()
     {
-        Container.Bind<IChessAdvisor>().To<LlmChessAdvisor>()
-            .FromComponentInNewPrefab(llmChessAdvisorPrefab).AsSingle();
+        Container.Bind<IChessAdvisor>()
+            .FromComponentInNewPrefab(chessAdvisorPrefab).AsSingle();
     }
 }

@@ -10,10 +10,14 @@ public class BoardHighlights : MonoBehaviour
     public GameObject highlightPrefab;
     private List<GameObject> highlights;
 
+    public GameObject suggestionPrefab;
+    private List<GameObject> suggestions;
+
     private void Start()
     {
         Instance = this;
         highlights = new List<GameObject>();
+        suggestions = new List<GameObject>();
     }
 
     private GameObject GetHighLightObject()
@@ -24,6 +28,19 @@ public class BoardHighlights : MonoBehaviour
         {
             go = Instantiate(highlightPrefab);
             highlights.Add(go);
+        }
+
+        return go;
+    }
+
+    private GameObject GetSuggestionObject()
+    {
+        GameObject go = suggestions.Find(g => !g.activeSelf);
+
+        if (go == null)
+        {
+            go = Instantiate(suggestionPrefab);
+            suggestions.Add(go);
         }
 
         return go;
@@ -50,5 +67,29 @@ public class BoardHighlights : MonoBehaviour
     {
         foreach (GameObject go in highlights)
             go.SetActive(false);
+    }
+
+    public void SuggestionMoves(List<Vector2Int> locations)
+    {
+        locations.ForEach(a =>
+        {
+            GameObject go = GetSuggestionObject();
+            go.SetActive(true);
+            go.transform.position = new Vector3(a.x + 0.5f, 0.0002f, a.y + 0.5f);
+        });
+    }
+
+    public void HideSuggestions()
+    {
+        foreach (GameObject go in suggestions)
+        {
+            go.SetActive(false);
+        }
+    }
+
+    public void HideAll()
+    {
+        HideHighlights();
+        HideSuggestions();
     }
 }
