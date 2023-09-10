@@ -100,9 +100,29 @@ public class BoardManager : MonoBehaviour
 
         BoardHighlights.Instance.HighLightAllowedMoves(allowedMoves);
 
-        var suggestedLocation = await chessAdvisor.SuggestMovement(Chessmans[x, y], Chessmans, allowedMoves);
-        Debug.Log($"suggestions: {string.Join(", ", suggestedLocation)}");
+        var capturableChessmans = CapturableChessman(Chessmans, allowedMoves, isWhiteTurn);
+        if (capturableChessmans.Count > 0)
+        {
+            var suggestedLocation = await chessAdvisor.SuggestMovement(Chessmans[x, y], Chessmans, allowedMoves);
+            Debug.Log($"suggestions: {string.Join(", ", suggestedLocation)}");
+        }
         
+    }
+
+    private List<Chessman> CapturableChessman(Chessman[,] chessmans, bool[,] allowedMoves, bool isWhiteMove)
+    {
+        var result = new List<Chessman>();
+        for (int x = 0; x <= allowedMoves.GetUpperBound(0); x++)
+        {
+            for (int y = 0; y <= allowedMoves.GetUpperBound(1); y++)
+            {
+                if (allowedMoves[x, y] && chessmans[x, y] != null && isWhiteMove != chessmans[x, y].isWhite)
+                {
+                    result.Add(chessmans[x, y]);
+                }
+            }
+        }
+        return result;
     }
 
     private bool calculateVictory(bool isWhiteTurn, Chessman targetChessman)
