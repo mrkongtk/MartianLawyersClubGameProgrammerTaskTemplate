@@ -1,17 +1,33 @@
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using Zenject;
 
 namespace Gpt4All.Samples
 {
     public class ChatSample : MonoBehaviour
     {
-        public LlmManager manager;
+        [Inject]
+        private IChessAdvisor manager;
 
-        [Header("UI")]
-        public InputField input;
-        public Text output;
+        [Header("Chat")]
+        public TMPro.TMP_InputField input;
+        public ScrollRect outputArea;
+        public TMPro.TMP_Text output;
         public Button submit;
+
+        [Header("Appearance")]
+        [SerializeField]
+        protected RectTransform textArea;
+        [SerializeField]
+        protected Button showChatButton;
+        [SerializeField]
+        protected Button hideChatButton;
+
+        [Header("Loading")]
+        [SerializeField]
+        protected GameObject loadingIcon;
+
 
         private string _previousText;
 
@@ -19,7 +35,43 @@ namespace Gpt4All.Samples
         {
             input.onEndEdit.AddListener(OnSubmit);
             submit.onClick.AddListener(OnSubmitPressed);
-            manager.OnResponseUpdated += OnResponseHandler;
+            manager.AddResponseUpdatedListener(OnResponseHandler);
+            showChatButton.onClick.AddListener(OnShowChatPressed);
+            hideChatButton.onClick.AddListener(OnHideChatPressed);
+            manager.AddOnSubmitListener(OnIChessAdvisorSubmit);
+        }
+
+        private void OnDestroy()
+        {
+            input.onEndEdit.RemoveListener(OnSubmit);
+            submit.onClick.RemoveListener(OnSubmitPressed);
+            manager.RemoveResponseUpdatedListener(OnResponseHandler);
+            showChatButton.onClick.RemoveListener(OnShowChatPressed);
+            hideChatButton.onClick.RemoveListener(OnHideChatPressed);
+            manager.RemoveOnSubmitListener(OnIChessAdvisorSubmit);
+        }
+
+        private void Start()
+        {
+            loadingIcon.SetActive(false);
+            ShowChat(false);
+        }
+
+        private void OnShowChatPressed()
+        {
+            ShowChat(true);
+        }
+
+        private void OnHideChatPressed()
+        {
+            ShowChat(false);
+        }
+
+        private void ShowChat(bool show)
+        {
+            showChatButton.gameObject.SetActive(!show);
+            hideChatButton.gameObject.SetActive(show);
+            textArea.gameObject.SetActive(show);
         }
 
         private void OnSubmit(string prompt)
@@ -34,6 +86,21 @@ namespace Gpt4All.Samples
             SendToChat(input.text);
         }
 
+        private void OnIChessAdvisorSubmit(string query, bool start)
+        {
+            loadingIcon.SetActive(start);
+            if (start)
+            {
+                input.text = "";
+                output.text += $"<b>User:</b> {query}\n<b>Answer</b>: ";
+                _previousText = output.text;
+            } else
+            {
+                output.text += "\n";
+                outputArea.normalizedPosition = Vector2.zero;
+            }
+        }
+
         private async void SendToChat(string prompt)
         {
             if (string.IsNullOrEmpty(prompt))
@@ -43,13 +110,15 @@ namespace Gpt4All.Samples
             output.text += $"<b>User:</b> {prompt}\n<b>Answer</b>: ";
             _previousText = output.text;
 
-            await manager.Prompt(prompt);
+            await manager.Submit(prompt);
             output.text += "\n";
+            outputArea.normalizedPosition = Vector2.zero;
         }
 
         private void OnResponseHandler(string response)
         {
             output.text = _previousText + response;
+            outputArea.normalizedPosition = Vector2.zero;
         }
     }
 }

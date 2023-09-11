@@ -7,6 +7,13 @@
       "dependencies": {},
       "hash": "40869a5bbc618f0298b0e9c68845f14da8ca1990"
     },
+    "com.mathijsbakker.extenject": {
+      "version": "https://github.com/mrkongtk/upm-zenject.git#9.2.0",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "3deb1cdac9bec4d7b9aab25da0fd3369cc491df4"
+    },
     "com.unity.collab-proxy": {
       "version": "1.15.4",
       "depth": 0,

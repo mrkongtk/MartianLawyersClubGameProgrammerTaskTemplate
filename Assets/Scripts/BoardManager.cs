@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
+using Zenject;
 
 public class BoardManager : MonoBehaviour
 {
@@ -29,6 +31,9 @@ public class BoardManager : MonoBehaviour
     public Material selectedMat;
 
     public int[] EnPassantMove { set; get; }
+
+    [Inject]
+    private IChessAdvisor chessAdvisor;
 
     // Use this for initialization
     void Start()
@@ -95,12 +100,51 @@ public class BoardManager : MonoBehaviour
         selectedChessman.GetComponent<MeshRenderer>().material = selectedMat;
 
         BoardHighlights.Instance.HighLightAllowedMoves(allowedMoves);
+
+        var capturableChessmans = CapturableChessman(Chessmans, allowedMoves, isWhiteTurn);
+        if (capturableChessmans.Count > 0)
+        {
+            var query = new IChessAdvisor.Query(selectedChessman, Chessmans, allowedMoves);
+            GiveSuggestion(query);
+        }
+        
     }
 
-    private bool calculateVictory()
+    private List<Chessman> CapturableChessman(Chessman[,] chessmans, bool[,] allowedMoves, bool isWhiteMove)
     {
-        var rng = new System.Random();
-        return rng.Next(0, 100) < 50;
+        var result = new List<Chessman>();
+        for (int x = 0; x <= allowedMoves.GetUpperBound(0); x++)
+        {
+            for (int y = 0; y <= allowedMoves.GetUpperBound(1); y++)
+            {
+                if (allowedMoves[x, y] && chessmans[x, y] != null && isWhiteMove != chessmans[x, y].isWhite)
+                {
+                    result.Add(chessmans[x, y]);
+                }
+            }
+        }
+        return result;
+    }
+
+    private async void GiveSuggestion(IChessAdvisor.Query query)
+    {
+        while (chessAdvisor.IsAnalysing())
+        {
+            await Task.Yield();
+        }
+        if (query.target.IsSame(selectedChessman))
+        {
+            var suggestedLocation = await chessAdvisor.SuggestMovement(query);
+            if (query.target.IsSame(selectedChessman))
+            {
+                BoardHighlights.Instance.SuggestionMoves(suggestedLocation);
+            }
+        }
+    }
+
+    private bool calculateVictory(bool isWhiteTurn, Chessman targetChessman)
+    {
+        return targetChessman.isWhite != isWhiteTurn;
     }
 
     private void MoveChessman(int x, int y)
@@ -121,7 +165,7 @@ public class BoardManager : MonoBehaviour
                     return;
                 }
 
-                victory = calculateVictory();
+                victory = calculateVictory(isWhiteTurn, c);
                 if (victory)
                 {
                     activeChessman.Remove(c.gameObject);
@@ -180,7 +224,7 @@ public class BoardManager : MonoBehaviour
 
         selectedChessman.GetComponent<MeshRenderer>().material = previousMat;
 
-        BoardHighlights.Instance.HideHighlights();
+        BoardHighlights.Instance.HideAll();
         selectedChessman = null;
     }
 
@@ -302,7 +346,7 @@ public class BoardManager : MonoBehaviour
         }
 
         isWhiteTurn = true;
-        BoardHighlights.Instance.HideHighlights();
+        BoardHighlights.Instance.HideAll();
         SpawnAllChessmans();
     }
 }
